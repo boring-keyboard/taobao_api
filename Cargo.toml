@@ -1,0 +1,23 @@
+[package]
+name = "taobao_api_rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest = { version = "0.12.8", features = ["json", "blocking"] }
+serde = "1.0.210"
+serde_json = "1.0.128"
+serde_urlencoded = "0.7.1"
+regex = "1.11.0"
+chrono = "0.4.38"
+rsntp = "4.0.0"
+md5 = "0.7.0"
+crossterm = "0.28.1"
+rookie = { path = "rookie/rookie-rs", version = "0.5.3-beta.0"}
+clearscreen = "3.0.0"
+
+[profile.release]
+opt-level = 3
+debug = false
+lto = true
+panic = "abort"
