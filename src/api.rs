@@ -26,7 +26,7 @@ impl Api {
         // 初始化client
         Api {
             client:  Client::builder()
-            .redirect(reqwest::redirect::Policy::limited(20))  // 禁用自动重定向
+            .redirect(reqwest::redirect::Policy::limited(20))  // 20次
             .build().unwrap(),
         }
     }

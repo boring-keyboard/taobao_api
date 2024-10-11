@@ -23,8 +23,6 @@ use guide::Position;
 use std::panic;
 use terminal::Terminal;
 
-// const ITEM_ID: &str = "752370383997";
-// 840570254725
 fn main() -> () {
     panic::set_hook(Box::new(|_info| {
         let payload = _info.payload();
