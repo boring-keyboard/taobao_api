@@ -47,6 +47,11 @@ pub fn parse_params_data(settle_json: &Value) -> String {
     serde_json::to_string(&output_json).unwrap()
 }
 
+/**
+ * 提单策略
+ * 前3次并发提交，每次间隔33ms发送请求
+ * 如果3次都失败，再请求10次，每次发送都等待上次请求返回结果
+ */
 pub fn submit(
     cookie: &Cookie,
     settle_json: &Value,
@@ -58,7 +63,6 @@ pub fn submit(
     is_test: bool,
 ) -> (String, Value) {
     let params_data = parse_params_data(settle_json);
-    let start_time: chrono::DateTime<chrono::Local> = chrono::Local::now();
 
     let cookie = Arc::new(cookie.clone());
     let settle_json = Arc::new(settle_json.clone());
@@ -69,7 +73,7 @@ pub fn submit(
     let tx = Arc::new(tx);
     let mut handles = Vec::new();
 
-    let times = if is_test { 1 } else { 20 };
+    let times = if is_test { 1 } else { 3 };
 
     for _ in 0..times {
         let tx = Arc::clone(&tx);
@@ -79,14 +83,14 @@ pub fn submit(
         let params_data = Arc::clone(&params_data);
 
         handles.push(thread::spawn(move || {
-            let one_submit_result= api.submit(&cookie, &settle_json, &params_data);
+            let one_submit_result = api.submit(&cookie, &settle_json, &params_data);
 
             match tx.send(one_submit_result) {
                 Ok(_) => (),
                 Err(e) => println!("线程发送结果失败 {}", e),
             }
         }));
-        thread::sleep(std::time::Duration::from_millis(10));
+        thread::sleep(std::time::Duration::from_millis(33));
     }
 
     println!(
@@ -97,33 +101,55 @@ pub fn submit(
 
     for submit_result in rx {
         println!("{:?}", submit_result);
-        match submit_result {
-            // 752370383997
-            // 721969975375
-            Ok(submit_json) => {
-                let ret_text = get_response_ret(&submit_json);
-                if !ret_text.contains("SUCCESS") {
-                    println!("提单调用失败: {}", ret_text)
-                } else {
-                    // 有一个成功就返回
-                    println!(
-                        "提单 {},{}",
-                        start_time.format("%H:%M:%S%.3f").to_string(),
-                        chrono::Local::now().format("%H:%M:%S%.3f").to_string()
-                    );
-                    let order_id = submit_json
-                        .get("data")
-                        .and_then(|d| d.get("bizOrderId"))
-                        .and_then(|d| d.as_str())
-                        .unwrap()
-                        .to_string();
-                    return (order_id, submit_json);
-                }
+        match check_submit_result(submit_result) {
+            Ok((order_id, submit_json)) => {
+                return (order_id, submit_json);
             }
             Err(e) => {
                 println!("{}", e);
             }
         }
     }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    // 再请求10次
+    for _ in 0..10 {
+        let one_submit_result: Result<Value, String> =
+            api.submit(&cookie, &settle_json, &params_data);
+        match check_submit_result(one_submit_result) {
+            Ok((order_id, submit_json)) => {
+                return (order_id, submit_json);
+            }
+            Err(e) => {
+                println!("{}", e);
+            }
+        }
+    }
+
     panic!("提单失败");
+}
+
+fn check_submit_result(submit_result: Result<Value, String>) -> Result<(String, Value), String> {
+    match submit_result {
+        Ok(submit_json) => {
+            let ret_text = get_response_ret(&submit_json);
+            if !ret_text.contains("SUCCESS") {
+                return Err(format!("提单调用失败: {}", ret_text));
+            } else {
+                let order_id = submit_json
+                    .get("data")
+                    .and_then(|d| d.get("bizOrderId"))
+                    .and_then(|d| d.as_str())
+                    .unwrap()
+                    .to_string();
+                return Ok((order_id, submit_json));
+            }
+        }
+        Err(e) => {
+            return Err(e);
+        }
+    }
 }
