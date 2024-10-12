@@ -81,10 +81,10 @@ pub struct PayloadDataParams {
 }
 
 impl PayloadDataParams {
-    pub fn new(settle_json: &Value, data: String) -> Self {
+    pub fn new(settle_json: &Value, data: &str) -> Self {
         PayloadDataParams {
             operator: None,
-            data,
+            data: String::from(data),
             linkage: serde_json::to_string(settle_json.get("data").unwrap().get("linkage").unwrap()).unwrap(),
             hierarchy: serde_json::to_string(settle_json.get("data").unwrap().get("hierarchy").unwrap()).unwrap(),
             lifecycle: None

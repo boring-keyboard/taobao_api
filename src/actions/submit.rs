@@ -1,7 +1,10 @@
 use crate::actions::utils::get_response_ret;
 use crate::cookie::Cookie;
 use crate::Api;
+use core::panic;
 use serde_json::{json, Value};
+use std::sync::{mpsc, Arc};
+use std::thread;
 
 pub fn parse_params_data(settle_json: &Value) -> String {
     let item_like_arr = [
@@ -44,27 +47,80 @@ pub fn parse_params_data(settle_json: &Value) -> String {
     serde_json::to_string(&output_json).unwrap()
 }
 
-pub fn submit(cookie: &Cookie, settle_json: &Value, api: &Api, settle_time: (chrono::DateTime<chrono::Local>, chrono::DateTime<chrono::Local>)) -> (String, Value) {
+pub fn submit(
+    cookie: &Cookie,
+    settle_json: &Value,
+    api: &Api,
+    settle_time: (
+        chrono::DateTime<chrono::Local>,
+        chrono::DateTime<chrono::Local>,
+    ),
+) -> (String, Value) {
     let params_data = parse_params_data(settle_json);
     let start_time: chrono::DateTime<chrono::Local> = chrono::Local::now();
-    let submit_result = api.submit(cookie, settle_json, params_data);
-    println!("{},{}", settle_time.0.format("%H:%M:%S%.3f").to_string(), settle_time.1.format("%H:%M:%S%.3f").to_string());
-    println!("{},{}", start_time.format("%H:%M:%S%.3f").to_string(), chrono::Local::now().format("%H:%M:%S%.3f").to_string());
-    if let Err(e) = submit_result {
-        panic!("{}", e);
+
+    let cookie = Arc::new(cookie.clone());
+    let settle_json = Arc::new(settle_json.clone());
+    let api = Arc::new(api.clone());
+    let params_data = Arc::new(params_data);
+
+    let (tx, rx) = mpsc::channel();
+    let tx = Arc::new(tx);
+    let mut handles = Vec::new();
+
+    for _ in 0..8 {
+        let tx = Arc::clone(&tx);
+        let cookie = Arc::clone(&cookie);
+        let settle_json = Arc::clone(&settle_json);
+        let api = Arc::clone(&api);
+        let params_data = Arc::clone(&params_data);
+
+        handles.push(thread::spawn(move || {
+            let one_submit_result= api.submit(&cookie, &settle_json, &params_data);
+
+            match tx.send(one_submit_result) {
+                Ok(_) => (),
+                Err(e) => println!("线程发送结果失败 {}", e),
+            }
+        }));
+        thread::sleep(std::time::Duration::from_millis(20));
     }
 
-    let submit_json = submit_result.unwrap();
-    let ret_text = get_response_ret(&submit_json);
-    if !ret_text.contains("SUCCESS") {
-        panic!("提单调用失败: {}", ret_text)
-    }
+    println!(
+        "结算 {},{}",
+        settle_time.0.format("%H:%M:%S%.3f").to_string(),
+        settle_time.1.format("%H:%M:%S%.3f").to_string()
+    );
 
-    let order_id = submit_json
-        .get("data")
-        .and_then(|d| d.get("bizOrderId"))
-        .and_then(|d| d.as_str())
-        .unwrap()
-        .to_string();
-    (order_id, submit_json)
+    for submit_result in rx {
+        println!("{:?}", submit_result);
+        match submit_result {
+            // 752370383997
+            // 721969975375
+            Ok(submit_json) => {
+                let ret_text = get_response_ret(&submit_json);
+                if !ret_text.contains("SUCCESS") {
+                    println!("提单调用失败: {}", ret_text)
+                } else {
+                    // 有一个成功就返回
+                    println!(
+                        "提单 {},{}",
+                        start_time.format("%H:%M:%S%.3f").to_string(),
+                        chrono::Local::now().format("%H:%M:%S%.3f").to_string()
+                    );
+                    let order_id = submit_json
+                        .get("data")
+                        .and_then(|d| d.get("bizOrderId"))
+                        .and_then(|d| d.as_str())
+                        .unwrap()
+                        .to_string();
+                    return (order_id, submit_json);
+                }
+            }
+            Err(e) => {
+                println!("{}", e);
+            }
+        }
+    }
+    panic!("提单失败");
 }

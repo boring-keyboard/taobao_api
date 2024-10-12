@@ -4,6 +4,8 @@ use rookie::enums::Cookie as RCookie;
 use rookie::firefox;
 // use rookie::safari;
 
+// 实现clone trait
+#[derive(Clone)]
 pub struct Cookie {
     pub cookies: Vec<RCookie>,
 }

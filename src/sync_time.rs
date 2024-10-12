@@ -52,10 +52,10 @@ pub fn calc_network_delay(api: &Api, cookie: &Cookie) -> f64 {
     let std_dev = (sum / (delay_vec.len()) as f64).sqrt();
     // 标准正态分布z值查询表
     // https://www.sjsu.edu/faculty/gerstman/EpiInfo/z-table.htm
-    // -2.33对应的概率为0.9901
-    let z = -2.33;
+    // -1.65对应的概率为0.9505
+    let z = -1.65;
     let ret = avg_delay + z * std_dev;
-    println!("均值: {:.4}, 方差: {:.4}, 99%概率> {:.4}ms", avg_delay, variance, ret as u64);
+    println!("均值: {:.4}, 方差: {:.4}, 95%概率> {:.4}ms", avg_delay, variance, ret as u64);
     return ret;
 }
 

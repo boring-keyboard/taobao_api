@@ -17,6 +17,7 @@ const ORDER_CREATE_BASE_URL: &str = "https://h5api.m.taobao.com/h5/mtop.trade.or
 const USER_INFO_BASE_URL: &str = "https://h5api.m.taobao.com/h5/mtop.user.getusersimple/1.0/";
 const COOKIE_NAME_M_H5_TK: &str = "_m_h5_tk";
 
+#[derive(Clone)]
 pub struct Api {
     client: Client,
 }
@@ -142,7 +143,7 @@ impl Api {
         &self,
         cookie: &Cookie,
         settle_json: &Value,
-        params_data: String,
+        params_data: &str,
     ) -> Result<serde_json::Value, String> {
         let payload_data_params =
             payloads::submit::PayloadDataParams::new(settle_json, params_data);
