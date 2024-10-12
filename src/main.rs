@@ -49,6 +49,8 @@ fn main() -> () {
     
     check_user_permission(&api, &cookie);
 
+    let is_test = Guide::select_is_test();
+
     let item_id = Guide::input_item_id();
     let cart_json = actions::cart::check_cart(&cookie, &item_id, &api);
 
@@ -61,7 +63,7 @@ fn main() -> () {
     settle_time.0 = chrono::Local::now();
     let settle_json = actions::settlement::settle(&cookie, &cart_json, &item_id, &api);
     settle_time.1 = chrono::Local::now();
-    let (order_id, _) = actions::submit::submit(&cookie, &settle_json, &api, settle_time);
+    let (order_id, _) = actions::submit::submit(&cookie, &settle_json, &api, settle_time, is_test);
 
     println!("已提单, 查询订单信息...");
     if let Err(e) = api.get_order_create_time_mix(&cookie, &order_id) {

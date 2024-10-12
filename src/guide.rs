@@ -30,6 +30,32 @@ impl Guide {
         Terminal::read_line(&mut input).unwrap();
     }
 
+    pub fn select_is_test() -> bool {
+        let mut input = String::new();
+        let ret;
+        println!("本次是否测试(输入y或n)?");
+        loop {
+            print!("> ");
+            Terminal::flush().unwrap();
+            Terminal::read_line(&mut input).unwrap();
+            input = input.trim().to_string();
+            if input == "y" {
+                ret = true;
+                break
+            } else if input == "n" {
+                ret = false;
+                break
+            } else {
+                println!("输入错误, 重新输入");
+                input = String::new();
+            }
+        }
+    
+        // 光标向上一行，将>改成实心圆字符
+        println!("\x1B[1A\u{25CF} {}", input);
+        ret
+    }
+
     pub fn input_use_delay() -> bool {
         let mut input = String::new();
         let ret;

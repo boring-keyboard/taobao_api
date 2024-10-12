@@ -55,6 +55,7 @@ pub fn submit(
         chrono::DateTime<chrono::Local>,
         chrono::DateTime<chrono::Local>,
     ),
+    is_test: bool,
 ) -> (String, Value) {
     let params_data = parse_params_data(settle_json);
     let start_time: chrono::DateTime<chrono::Local> = chrono::Local::now();
@@ -68,7 +69,9 @@ pub fn submit(
     let tx = Arc::new(tx);
     let mut handles = Vec::new();
 
-    for _ in 0..8 {
+    let times = if is_test { 1 } else { 20 };
+
+    for _ in 0..times {
         let tx = Arc::clone(&tx);
         let cookie = Arc::clone(&cookie);
         let settle_json = Arc::clone(&settle_json);
@@ -83,7 +86,7 @@ pub fn submit(
                 Err(e) => println!("线程发送结果失败 {}", e),
             }
         }));
-        thread::sleep(std::time::Duration::from_millis(20));
+        thread::sleep(std::time::Duration::from_millis(10));
     }
 
     println!(
