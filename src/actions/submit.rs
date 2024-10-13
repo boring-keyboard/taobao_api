@@ -73,7 +73,7 @@ pub fn submit(
     let tx = Arc::new(tx);
     let mut handles = Vec::new();
 
-    let times = if is_test { 1 } else { 3 };
+    let times = if is_test { 1 } else { 2 };
 
     for _ in 0..times {
         let tx = Arc::clone(&tx);
