@@ -99,7 +99,7 @@ pub fn submit(
         settle_time.1.format("%H:%M:%S%.3f").to_string()
     );
 
-    for submit_result in rx {
+    while let Ok(submit_result) = rx.recv() {
         println!("{:?}", submit_result);
         match check_submit_result(submit_result) {
             Ok((order_id, submit_json)) => {

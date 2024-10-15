@@ -22,7 +22,7 @@ use guide::Guide;
 use guide::Position;
 use std::panic;
 use terminal::Terminal;
-
+// 837731725792
 fn main() -> () {
     panic::set_hook(Box::new(|_info| {
         let payload = _info.payload();
@@ -99,7 +99,8 @@ fn check_user_permission(api: &Api, cookie: &Cookie) -> () {
         "tb861675844",
         "神淼o0",
         "tb325084889061",
-        "魅影邪君丨"
+        "魅影邪君丨",
+        "tb510496582"
     ];
 
     if !(auth_user.contains(&nick) || auth_user.contains(&display_nick)) {
